@@ -43,7 +43,7 @@ def main():
         f"""
         <style>
         body {{
-            background-image: url('{seal_url}');
+            background-image: url('{https://i.etsystatic.com/40811848/r/il/c670c3/5283635364/il_1080xN.5283635364_ki78.jpg}');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
