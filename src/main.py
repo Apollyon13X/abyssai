@@ -4,9 +4,9 @@ import faiss
 from sentence_transformers import SentenceTransformer
 
 from src.config import *
-from src.index import load_prebuilt_index, process_pdfs
-from src .pdf_utils import pdf_to_text, split_chunks
-from src.api_client import query_morpheus
+from src.index import ...
+from src .pdf_utils import ...
+from src.api_client import ...
 
 
 def answer_query(query: str, index: faiss.IndexFlatIP, meta: List[dict],
