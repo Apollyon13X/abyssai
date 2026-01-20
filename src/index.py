@@ -1,4 +1,4 @@
-```python
+python
 import json
 from pathlib import Path
 from typing import List, Tuple, Optional
@@ -86,4 +86,4 @@ def process_pdfs() -> Tuple[faiss.IndexFlatIP, List[dict]]:
     
     print(f"✅ Index built successfully! {len(meta)} chunks from {len(pdf_files)} PDFs")
     return index, meta
-```
+
