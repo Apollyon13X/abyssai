@@ -1,28 +1,21 @@
+# Core ML/AI stack
+streamlit>=1.29.0
+faiss-cpu>=1.7.4
+sentence-transformers>=2.2.2
 
-# Python artefacts
-*.py
-*.pyo
-*.pyd
-*.egg-info/
-*.dist-info/
+# PDF processing
+PyPDF2>=3.0.1
+python-magic>=0.4.27
 
-# Virtual environments
-.venv/
-env/
-venv/
-ENV/
+# API and utilities
+requests>=2.31.0
+python-dotenv>=1.0.0
+httpx>=0.25.0
 
-# Secrets
-.env
-*.key
-*.secret
+# Data handling
+numpy>=1.24.0
+pandas>=2.0.0
+typing-extensions>=4.8.0
 
-# Large data (PDFs, indexes, metadata)
-abyss_feed/
-abyss_index.faiss
-abyss_meta.json
-
-# OS junk
-.DS_Store
-Thumbs.db
-*.log
+# Optional: for better performance
+# faiss-gpu>=1.7.4  # Uncomment if you have NVIDIA GPU
