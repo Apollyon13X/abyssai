@@ -1,61 +1,89 @@
+```python
 import json
 from pathlib import Path
-from typing import List, Tuple
-
+from typing import List, Tuple, Optional
 import faiss
 import numpy as np
 from sentence_transformers import SentenceTransformer
-
 from .config import PDF_ROOT, INDEX_PATH, META_PATH, EMBED_MODEL, CHUNK_SIZE
 from .pdf_utils import pdf_to_text, split_chunks
 
-
 def embed_chunks(chunks: List[str], model: SentenceTransformer) -> np.ndarray:
+    """Generate embeddings for text chunks."""
     if not chunks:
-        return np.empty((0, model.get_sentence_embedding_dimension()), dtype=np.float32)
-    return model.encode(chunks, normalize_embeddings=True).astype(np.float32)
-
+        dim = model.get_sentence_embedding_dimension()
+        return np.empty((0, dim), dtype=np.float32)
+    
+    return model.encode(chunks, normalize_embeddings=True, show_progress_bar=True).astype(np.float32)
 
 def build_faiss_index(emb: np.ndarray) -> faiss.IndexFlatIP:
+    """Build FAISS index using inner product (cosine similarity)."""
     if emb.size == 0:
-        raise ValueError("No embeddings – you must feed PDFs first.")
+        raise ValueError("No embeddings generated. Add PDFs to abyss_feed/ first.")
+    
     dim = emb.shape[1]
-    idx = faiss.IndexFlatIP(dim)      # inner‑product ≈ cosine similarity
+    idx = faiss.IndexFlatIP(dim)
     idx.add(emb)
     return idx
 
-
-def load_prebuilt_index() -> Tuple[faiss.IndexFlatIP | None, List[dict]]:
-    """Return existing FAISS index + metadata, or (None, [])."""
+def load_prebuilt_index() -> Tuple[Optional[faiss.IndexFlatIP], List[dict]]:
+    """Load existing FAISS index and metadata if available."""
     if INDEX_PATH.exists() and META_PATH.exists():
-        index = faiss.read_index(str(INDEX_PATH))
-        meta = json.loads(META_PATH.read_text())
-        return index, meta
+        try:
+            index = faiss.read_index(str(INDEX_PATH))
+            meta = json.loads(META_PATH.read_text(encoding='utf-8'))
+            print(f"Loaded existing index with {len(meta)} chunks")
+            return index, meta
+        except Exception as e:
+            print(f"Failed to load existing index: {e}")
+    
     return None, []
 
-
 def process_pdfs() -> Tuple[faiss.IndexFlatIP, List[dict]]:
-    """Walk PDF_ROOT, extract, chunk, embed, persist."""
+    """Process all PDFs in abyss_feed: extract text, chunk, embed, and persist."""
+    if not PDF_ROOT.exists():
+        raise RuntimeError(f"PDF directory {PDF_ROOT} does not exist. Create it and add some PDFs.")
+    
     all_chunks, meta = [], []
-
-    for pdf_path in PDF_ROOT.rglob("*.pdf"):
+    pdf_files = list(PDF_ROOT.rglob("*.pdf"))
+    
+    if not pdf_files:
+        raise RuntimeError(f"No PDFs found in {PDF_ROOT}. Add your ethical hacking PDFs there.")
+    
+    print(f"Found {len(pdf_files)} PDF(s) to process...")
+    
+    for pdf_path in pdf_files:
+        print(f"Processing {pdf_path.name}...")
         raw = pdf_to_text(pdf_path)
+        
         if not raw.strip():
+            print(f"Warning: {pdf_path.name} has no extractable text")
             continue
-        for i, chunk in enumerate(split_chunks(raw)):
+        
+        chunks = split_chunks(raw)
+        for i, chunk in enumerate(chunks):
             all_chunks.append(chunk)
-            meta.append({"source": str(pdf_path), "chunk_id": i})
-
+            meta.append({
+                "source": str(pdf_path.relative_to(BASE_DIR)),
+                "chunk_id": i,
+                "pdf_name": pdf_path.name
+            })
+    
     if not all_chunks:
-        raise RuntimeError("No readable PDFs found in abyss_feed/")
-
+        raise RuntimeError("No readable content found in any PDF.")
+    
+    print(f"Generating embeddings for {len(all_chunks)} chunks...")
     embedder = SentenceTransformer(EMBED_MODEL)
     embeddings = embed_chunks(all_chunks, embedder)
-
+    
+    print("Building FAISS index...")
     index = build_faiss_index(embeddings)
-
-    # Persist for future runs
+    
+    # Persist to disk
+    print("Saving index and metadata...")
     faiss.write_index(index, str(INDEX_PATH))
-    META_PATH.write_text(json.dumps(meta, ensure_ascii=False, indent=2))
-
+    META_PATH.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding='utf-8')
+    
+    print(f"✅ Index built successfully! {len(meta)} chunks from {len(pdf_files)} PDFs")
     return index, meta
+```
